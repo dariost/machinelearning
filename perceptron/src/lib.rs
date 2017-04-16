@@ -17,7 +17,7 @@ impl Perceptron
     }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub fn fit(&mut self, data: &[&[f64]], class: &[bool]) -> usize
+    pub fn fit(&mut self, data: &[&[f64]], class: &[bool], callback: Option<fn(&usize, &usize, &[f64])>) -> usize
     {
         let class: Vec<f64> = class.iter().map(|&x| if x {1.0} else {-1.0}).collect();
         assert_eq!(data.len(), class.len());
@@ -40,8 +40,10 @@ impl Perceptron
                     errors += 1;
                 }
             }
-            println!("Iteration #{}: {} error(s)", it, errors);
-            println!("Weight: {:?}", self.weight);
+            if let Some(cb) = callback
+            {
+                cb(&it, &errors, &self.weight);
+            }
             if errors == 0
             {
                 break;
@@ -63,11 +65,18 @@ impl Perceptron
     }
 }
 
+#[allow(dead_code)]
+fn print_callback(iteration: &usize, errors: &usize, weight: &[f64])
+{
+    println!("Iteration #{}: {} error(s)", iteration, errors);
+    println!("Weight: {:?}", weight);
+}
+
 #[test]
 fn trivial()
 {
     let mut p = Perceptron::new(2, 0.1, 100);
-    assert_eq!(p.fit(&[&[1.0, 0.0], &[4.0, 1.0], &[0.0, 1.0], &[2.0, 3.0]], &[true, false, true, false]), 0);
+    assert_eq!(p.fit(&[&[1.0, 0.0], &[4.0, 1.0], &[0.0, 1.0], &[2.0, 3.0]], &[true, false, true, false], Some(print_callback)), 0);
     assert_eq!(p.predict(&[-1.0, -1.0]), true);
     assert_eq!(p.predict(&[10.0, 10.0]), false);
     assert_eq!(p.predict(&[0.5, 0.5]), true);
@@ -78,7 +87,7 @@ fn trivial()
 fn trivial_wrong()
 {
     let mut p = Perceptron::new(2, 0.1, 100);
-    assert_eq!(p.fit(&[&[1.0, 0.0], &[0.0, 1.0], &[1.0, 1.0], &[0.0, 0.0]], &[true, true, false, false]), 0);
+    assert_eq!(p.fit(&[&[1.0, 0.0], &[0.0, 1.0], &[1.0, 1.0], &[0.0, 0.0]], &[true, true, false, false], None), 0);
 }
 
 #[test]
@@ -89,6 +98,7 @@ fn trivial_3d()
                        &[0.0, 1.0, 1.0],
                        &[1.0, 1.0, 0.0],
                        &[0.0, 0.0, 0.0]],
-                     &[true, true, false, false]),
+                     &[true, true, false, false],
+                     Some(print_callback)),
                0);
 }
